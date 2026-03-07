@@ -12,7 +12,20 @@
           "package_name": "com.example.ma_boutique"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "801622912874-938hggfa44pq9plohs1106ga5eejhdm8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ma_boutique",
+            "certificate_hash": "a7391788684c70203f73954e992d126ef494d44b"
+          }
+        },
+        {
+          "client_id": "801622912874-kifdmi78v2b133c539jb3oek93s7nba2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBOJM-VI3U9EVVXJaO8owpJEeQtL-LD3DU"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "801622912874-kifdmi78v2b133c539jb3oek93s7nba2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "801622912874-k082irhsianrr7g363ssr5oe8vb98dbn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.maBoutique"
+              }
+            }
+          ]
         }
       }
     }

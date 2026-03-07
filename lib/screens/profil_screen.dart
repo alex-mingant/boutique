@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 import '../services/profil_service.dart';
 import '../theme/app_colors.dart';
@@ -156,6 +154,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
               ),
               _itemMenu(
                 context,
+                icone: Icons.credit_card_outlined,
+                label: "Mes cartes enregistrées",
+                onTap: () => context.push('/profil/cartes'),
+              ),
+              _itemMenu(
+                context,
                 icone: Icons.favorite_outline,
                 label: "Mes favoris",
                 onTap: () => context.push('/profil/favoris'),
@@ -176,26 +180,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 ),
               ]),
             ],
-
-            const SizedBox(height: 16),
-
-            // Thème
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, _) {
-                return _sectionMenu(context, [
-                  _itemToggle(
-                    context,
-                    icone: themeProvider.isDark
-                        ? Icons.dark_mode_outlined
-                        : Icons.light_mode_outlined,
-                    label: "Thème",
-                    valeur: themeProvider.isDark,
-                    onChanged: (_) => themeProvider.toggle(),
-                    isLast: true,
-                  ),
-                ]);
-              },
-            ),
 
             const SizedBox(height: 16),
 
@@ -288,62 +272,4 @@ class _ProfilScreenState extends State<ProfilScreen> {
     );
   }
 
-  Widget _itemToggle(
-    BuildContext context, {
-    required IconData icone,
-    required String label,
-    required bool valeur,
-    required ValueChanged<bool> onChanged,
-    bool isLast = false,
-  }) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: context.containerBg,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icone, color: context.textPrimary, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: context.textPrimary,
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    valeur ? 'Sombre' : 'Clair',
-                    style: TextStyle(color: context.textSecondary, fontSize: 13),
-                  ),
-                  const SizedBox(width: 8),
-                  Switch(
-                    value: valeur,
-                    onChanged: onChanged,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: const Color(0xFF1E293B),
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: const Color(0xFFCBD5E1),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        if (!isLast)
-          Divider(height: 1, indent: 56, color: context.dividerColor),
-      ],
-    );
-  }
 }

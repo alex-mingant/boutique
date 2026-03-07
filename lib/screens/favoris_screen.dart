@@ -106,7 +106,7 @@ class _FavoriCard extends StatelessWidget {
                   width: 72,
                   height: 72,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
+                  errorBuilder: (context, error, stack) => Container(
                     width: 72,
                     height: 72,
                     color: context.containerBg,

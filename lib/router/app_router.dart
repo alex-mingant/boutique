@@ -14,6 +14,7 @@ import '../screens/modifier_compte_screen.dart';
 import '../screens/adresses_screen.dart';
 import '../screens/promos_screen.dart';
 import '../screens/favoris_screen.dart';
+import '../screens/cartes_screen.dart';
 
 // ⚙️ Remplace par ton email admin
 const String _emailAdmin = 'enzo.omnes@gmail.com';
@@ -113,6 +114,11 @@ GoRoute(
   path: '/profil/promos',
   name: 'promos',
   builder: (context, state) => const PromosScreen(),
+),
+GoRoute(
+  path: '/profil/cartes',
+  name: 'cartes',
+  builder: (context, state) => const CartesScreen(),
 ),
 ],
 );

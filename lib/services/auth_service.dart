@@ -1,12 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Récupérer l'utilisateur connecté
   User? get utilisateurActuel => _auth.currentUser;
-
-  // Écouter les changements de connexion en temps réel
   Stream<User?> get etatConnexion => _auth.authStateChanges();
 
   // Inscription
@@ -24,7 +22,7 @@ class AuthService {
     }
   }
 
-  // Connexion
+  // Connexion email/mot de passe
   Future<UserCredential?> connecter({
     required String email,
     required String motDePasse,
@@ -39,8 +37,26 @@ class AuthService {
     }
   }
 
+  // Connexion Google
+  Future<UserCredential?> connecterAvecGoogle() async {
+    final googleUser = await GoogleSignIn().signIn();
+    if (googleUser == null) return null; // annulé par l'utilisateur
+
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    try {
+      return await _auth.signInWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw _getMessage(e.code);
+    }
+  }
+
   // Déconnexion
   Future<void> deconnecter() async {
+    await GoogleSignIn().signOut();
     await _auth.signOut();
   }
 
@@ -53,7 +69,6 @@ class AuthService {
     }
   }
 
-  // Convertir les codes d'erreur Firebase en messages lisibles
   String _getMessage(String code) {
     switch (code) {
       case 'user-not-found':
@@ -66,6 +81,8 @@ class AuthService {
         return 'Le mot de passe doit faire au moins 6 caractères.';
       case 'invalid-email':
         return 'Adresse email invalide.';
+      case 'account-exists-with-different-credential':
+        return 'Un compte existe déjà avec cet email.';
       default:
         return 'Une erreur est survenue. Réessaie.';
     }

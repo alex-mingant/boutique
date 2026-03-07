@@ -651,10 +651,11 @@ class _ProduitsTabState extends State<_ProduitsTab> {
   }
 }
 
-// ─── Formulaire création produit (bottom sheet) ───────────────────────────────
+// ─── Formulaire création/édition produit (bottom sheet) ──────────────────────
 
 class _FormulaireProduit extends StatefulWidget {
-  const _FormulaireProduit();
+  final Produit? produitExistant;
+  const _FormulaireProduit({this.produitExistant});
 
   @override
   State<_FormulaireProduit> createState() => _FormulaireProduitState();
@@ -662,16 +663,41 @@ class _FormulaireProduit extends StatefulWidget {
 
 class _FormulaireProduitState extends State<_FormulaireProduit> {
   final _service = ProduitService();
-  final _nomController = TextEditingController();
-  final _prixController = TextEditingController();
-  final _imageController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _prixAuKgController = TextEditingController();
-  final _provenanceController = TextEditingController(text: 'France');
-  String _categorie = 'fruits';
-  String _unite = 'kg';
-  bool _bio = false;
+  late final TextEditingController _nomController;
+  late final TextEditingController _prixController;
+  late final TextEditingController _imageController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _prixAuKgController;
+  late final TextEditingController _provenanceController;
+  late String _categorie;
+  late String _unite;
+  late bool _bio;
+  late bool _phare;
+  late bool _saison;
   bool _chargement = false;
+
+  bool get _estEdition => widget.produitExistant != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.produitExistant;
+    _nomController = TextEditingController(text: p?.nom ?? '');
+    _prixController = TextEditingController(text: p != null ? p.prix.toString() : '');
+    _imageController = TextEditingController(text: p?.imageUrl ?? '');
+    _descriptionController = TextEditingController(text: p?.description ?? '');
+    _prixAuKgController = TextEditingController(text: p != null && p.prixAuKg > 0 ? p.prixAuKg.toString() : '');
+    _provenanceController = TextEditingController(text: p?.provenance ?? 'France');
+    const validCategories = ['fruits', 'legumes', 'autres'];
+    const validUnites = ['kg', 'pièce'];
+    final cat = p?.categorie ?? 'fruits';
+    final uni = p?.unite ?? 'kg';
+    _categorie = validCategories.contains(cat) ? cat : 'fruits';
+    _unite = validUnites.contains(uni) ? uni : 'kg';
+    _bio = p?.bio ?? false;
+    _phare = p?.phare ?? false;
+    _saison = p?.saison ?? false;
+  }
 
   @override
   void dispose() {
@@ -706,25 +732,43 @@ class _FormulaireProduitState extends State<_FormulaireProduit> {
     }
     setState(() => _chargement = true);
     try {
-      await _service.ajouterProduit(Produit(
-        id: '',
-        nom: _nomController.text.trim(),
-        prix: prixVal,
-        imageUrl: _imageController.text.trim(),
-        description: _descriptionController.text.trim(),
-        categorie: _categorie,
-        unite: _unite,
-        prixAuKg: double.tryParse(_prixAuKgController.text.trim()) ?? 0,
-        provenance: _provenanceController.text.trim().isEmpty ? 'France' : _provenanceController.text.trim(),
-        bio: _bio,
-      ));
+      if (_estEdition) {
+        await _service.mettreAJourProduit(widget.produitExistant!.id, {
+          'nom': _nomController.text.trim(),
+          'prix': prixVal,
+          'imageUrl': _imageController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'categorie': _categorie,
+          'unite': _unite,
+          'prixAuKg': double.tryParse(_prixAuKgController.text.trim()) ?? 0,
+          'provenance': _provenanceController.text.trim().isEmpty ? 'France' : _provenanceController.text.trim(),
+          'bio': _bio,
+          'phare': _phare,
+          'saison': _saison,
+        });
+      } else {
+        await _service.ajouterProduit(Produit(
+          id: '',
+          nom: _nomController.text.trim(),
+          prix: prixVal,
+          imageUrl: _imageController.text.trim(),
+          description: _descriptionController.text.trim(),
+          categorie: _categorie,
+          unite: _unite,
+          prixAuKg: double.tryParse(_prixAuKgController.text.trim()) ?? 0,
+          provenance: _provenanceController.text.trim().isEmpty ? 'France' : _provenanceController.text.trim(),
+          bio: _bio,
+          phare: _phare,
+          saison: _saison,
+        ));
+      }
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Row(children: [
-            Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-            SizedBox(width: 10),
-            Expanded(child: Text('Produit ajouté avec succès !')),
+          content: Row(children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(child: Text(_estEdition ? 'Produit modifié avec succès !' : 'Produit ajouté avec succès !')),
           ]),
           backgroundColor: const Color(0xFF16A34A),
           behavior: SnackBarBehavior.floating,
@@ -782,10 +826,10 @@ class _FormulaireProduitState extends State<_FormulaireProduit> {
                     Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(color: context.containerBg, borderRadius: BorderRadius.circular(10)),
-                      child: Icon(Icons.inventory_2_outlined, color: context.textPrimary, size: 20),
+                      child: Icon(_estEdition ? Icons.edit_outlined : Icons.inventory_2_outlined, color: context.textPrimary, size: 20),
                     ),
                     const SizedBox(width: 12),
-                    Text("Nouveau produit",
+                    Text(_estEdition ? "Modifier le produit" : "Nouveau produit",
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: context.textPrimary)),
                   ],
                 ),
@@ -880,28 +924,12 @@ class _FormulaireProduitState extends State<_FormulaireProduit> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Switch Bio
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: context.containerBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.eco_outlined, color: context.textSecondary, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text('Produit bio', style: TextStyle(fontSize: 14, color: context.textPrimary)),
-                        ),
-                        Switch(
-                          value: _bio,
-                          activeThumbColor: const Color(0xFF16A34A),
-                          onChanged: (v) => setState(() => _bio = v),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Switches
+                  _switchRow(context, Icons.eco_outlined, 'Produit bio', _bio, const Color(0xFF16A34A), (v) => setState(() => _bio = v)),
+                  const SizedBox(height: 8),
+                  _switchRow(context, Icons.star_outline, 'Produit phare ⭐', _phare, const Color(0xFF1E293B), (v) => setState(() => _phare = v)),
+                  const SizedBox(height: 8),
+                  _switchRow(context, Icons.eco, 'Légume de saison 🌱', _saison, const Color(0xFF16A34A), (v) => setState(() => _saison = v)),
 
                   const SizedBox(height: 24),
                 ],
@@ -926,12 +954,13 @@ class _FormulaireProduitState extends State<_FormulaireProduit> {
                 ),
                 child: _chargement
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Row(
+                    : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check, size: 18),
-                          SizedBox(width: 8),
-                          Text("Enregistrer le produit", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                          const Icon(Icons.check, size: 18),
+                          const SizedBox(width: 8),
+                          Text(_estEdition ? "Modifier le produit" : "Enregistrer le produit",
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                         ],
                       ),
               ),
@@ -944,6 +973,21 @@ class _FormulaireProduitState extends State<_FormulaireProduit> {
 
   Widget _sectionLabel(BuildContext context, String label) {
     return Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: context.textSecondary, letterSpacing: 0.5));
+  }
+
+  Widget _switchRow(BuildContext context, IconData icon, String label, bool value, Color activeColor, ValueChanged<bool> onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(color: context.containerBg, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Icon(icon, color: context.textSecondary, size: 20),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label, style: TextStyle(fontSize: 14, color: context.textPrimary))),
+          Switch(value: value, activeThumbColor: activeColor, onChanged: onChanged),
+        ],
+      ),
+    );
   }
 
   Widget _dropdown<T>({
@@ -1032,6 +1076,16 @@ class _ProduitItem extends StatelessWidget {
                 onChanged: (val) => service.mettreAJourProduit(produit.id, {'saison': val}),
               ),
             ],
+          ),
+          // Modifier
+          IconButton(
+            icon: Icon(Icons.edit_outlined, color: context.textSecondary, size: 20),
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => _FormulaireProduit(produitExistant: produit),
+            ),
           ),
           // Supprimer
           IconButton(

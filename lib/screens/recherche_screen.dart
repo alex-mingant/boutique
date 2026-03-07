@@ -43,6 +43,10 @@ class _RechercheScreenState extends State<RechercheScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
             filled: true,
             fillColor: context.inputFill,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

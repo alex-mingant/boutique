@@ -88,7 +88,7 @@ class _DetailScreenState extends State<DetailScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: context.cardBg,
+        backgroundColor: context.scaffoldBg,
         body: Stack(
           children: [
             // ── Contenu scrollable ──────────────────────────────────────
@@ -111,7 +111,7 @@ class _DetailScreenState extends State<DetailScreen> {
                           width: double.infinity,
                           height: 340,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
+                          errorBuilder: (context, error, stack) => Container(
                             height: 340,
                             color: context.containerBg,
                             child: Icon(Icons.image_not_supported,

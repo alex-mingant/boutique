@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/produit.dart';
 import '../theme/app_colors.dart';
@@ -22,25 +21,28 @@ class ProduitCard extends StatelessWidget {
             Image.network(
               produit.imageUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
+              errorBuilder: (context, error, stack) => Container(
                 color: context.containerBg,
                 child: Icon(Icons.image_not_supported,
                     color: context.chevronColor, size: 40),
               ),
             ),
 
-            // Overlay gris transparent en bas
+            // Overlay dégradé en bas
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    color: Colors.grey.shade800.withValues(alpha: 0.55),
-                    child: Column(
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xCC1E1E1E)],
+                  ),
+                ),
+                child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -103,8 +105,6 @@ class ProduitCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
-              ),
             ),
           ],
         ),

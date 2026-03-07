@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +18,7 @@ class AccueilScreen extends StatefulWidget {
 
 class _AccueilScreenState extends State<AccueilScreen> {
   final _produitService = ProduitService();
+  final _panierPretService = PanierPretService();
   List<Produit> _produits = [];
   StreamSubscription? _sub;
 
@@ -43,7 +43,6 @@ class _AccueilScreenState extends State<AccueilScreen> {
 
     return Scaffold(
       backgroundColor: context.scaffoldBg,
-      extendBodyBehindAppBar: true,
       appBar: _buildAppBar(context),
       bottomNavigationBar: _buildBottomNav(context),
       body: SingleChildScrollView(
@@ -51,8 +50,6 @@ class _AccueilScreenState extends State<AccueilScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            // ─── Hero ───────────────────────────────────────────
-            _buildHero(context),
             const SizedBox(height: 28),
 
             // ─── Nos rayons ──────────────────────────────────────
@@ -100,35 +97,83 @@ class _AccueilScreenState extends State<AccueilScreen> {
   //  AppBar
   // ─────────────────────────────────────────────────────────────
 
+  bool _estOuvert() {
+    final now = DateTime.now();
+    final heure = now.hour + now.minute / 60.0;
+    if (now.weekday >= 1 && now.weekday <= 6) {
+      return heure >= 8 && heure < 19;
+    } else {
+      return heure >= 9 && heure < 13;
+    }
+  }
+
   PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final ouvert = _estOuvert();
     return AppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: context.cardBg,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      titleSpacing: 16,
+      title: Row(
+        children: [
+          Text(
+            "Ma Boutique",
+            style: TextStyle(
+              color: context.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: ouvert ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: ouvert ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  ouvert ? "Ouvert" : "Fermé",
+                  style: TextStyle(
+                    color: ouvert ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
       actions: [
         Consumer<PanierProvider>(
           builder: (context, panier, child) {
             return Stack(
               alignment: Alignment.center,
               children: [
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF1E293B)),
-                    onPressed: () => context.go('/panier'),
-                  ),
+                IconButton(
+                  icon: Icon(Icons.shopping_cart_outlined, color: context.textPrimary),
+                  onPressed: () => context.go('/panier'),
                 ),
                 if (panier.nombreArticles > 0)
                   Positioned(
-                    right: 8,
+                    right: 6,
                     top: 6,
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF2563EB),
+                        color: Color(0xFF1E293B),
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -141,17 +186,11 @@ class _AccueilScreenState extends State<AccueilScreen> {
             );
           },
         ),
-        Container(
-          margin: const EdgeInsets.only(right: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.person_outline, color: Color(0xFF1E293B)),
-            onPressed: () => context.push('/profil'),
-          ),
+        IconButton(
+          icon: Icon(Icons.person_outline, color: context.textPrimary),
+          onPressed: () => context.push('/profil'),
         ),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -161,7 +200,9 @@ class _AccueilScreenState extends State<AccueilScreen> {
   // ─────────────────────────────────────────────────────────────
 
   Widget _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      child: BottomNavigationBar(
       currentIndex: 0,
       onTap: (index) {
         if (index == 1) context.go('/panier');
@@ -169,7 +210,7 @@ class _AccueilScreenState extends State<AccueilScreen> {
         if (index == 3) context.push('/profil');
       },
       backgroundColor: context.cardBg,
-      selectedItemColor: const Color(0xFF2563EB),
+      selectedItemColor: const Color(0xFF1E293B),
       unselectedItemColor: context.textHint,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
       unselectedLabelStyle: const TextStyle(fontSize: 11),
@@ -180,82 +221,7 @@ class _AccueilScreenState extends State<AccueilScreen> {
         BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: "Commandes"),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: "Profil"),
       ],
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  //  Hero
-  // ─────────────────────────────────────────────────────────────
-
-  Widget _buildHero(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          height: 280,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: NetworkImage('https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800'),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        Container(
-          height: 280,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.3),
-                Colors.black.withValues(alpha: 0.6),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Fruits & Légumes",
-                  style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold),
-                ),
-                const Text(
-                  "Frais du marché, livrés chez vous 🌿",
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: () => context.push('/recherche'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.search, color: context.textHint),
-                        const SizedBox(width: 10),
-                        Text("Rechercher un produit...", style: TextStyle(color: context.textHint, fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -319,7 +285,7 @@ class _AccueilScreenState extends State<AccueilScreen> {
 
   Widget _buildPaniersPrets(BuildContext context) {
     return StreamBuilder<List<PanierPret>>(
-      stream: PanierPretService().getPaniersPrets(),
+      stream: _panierPretService.getPaniersPrets(),
       builder: (context, snapshot) {
         final paniers = snapshot.data ?? [];
         if (paniers.isEmpty) return const SizedBox();
@@ -661,59 +627,60 @@ class _AccueilScreenState extends State<AccueilScreen> {
                 ),
               ),
 
-              // Overlay gris transparent en bas
+              // Overlay dégradé en bas
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      color: Colors.grey.shade800.withValues(alpha: 0.55),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0xCC1E1E1E)],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  p.nom,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
-                                    color: Colors.white,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          Expanded(
+                            child: Text(
+                              p.nom,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                color: Colors.white,
                               ),
-                              if (p.bio)
-                                Container(
-                                  margin: const EdgeInsets.only(left: 4),
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF16A34A).withValues(alpha: 0.85),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Text("Bio", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${p.prix.toStringAsFixed(2)} €/${p.unite}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (p.bio)
+                            Container(
+                              margin: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF16A34A).withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text("Bio", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${p.prix.toStringAsFixed(2)} €/${p.unite}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -745,15 +712,10 @@ class _AccueilScreenState extends State<AccueilScreen> {
               Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(color: Colors.grey.shade300),
+                errorBuilder: (context, error, stack) => Container(color: Colors.grey.shade300),
               ),
-              // Flou + assombrissement
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.35),
-                ),
-              ),
+              // Assombrissement
+              Container(color: Colors.black.withValues(alpha: 0.35)),
               // Emoji + label
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
