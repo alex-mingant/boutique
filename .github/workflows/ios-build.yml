@@ -14,8 +14,8 @@ on:
         type: boolean
 
 jobs:
-  ios-simulator-build:
-    name: iOS Simulator Build (no signing)
+  ios-build-no-signing:
+    name: iOS Device Build (no signing)
     runs-on: macos-14
 
     steps:
@@ -51,39 +51,29 @@ jobs:
             sleep 15
           done
 
-      - name: Build iOS simulator app
+      - name: Build iOS app (no signing)
         run: |
           set -o pipefail
-          LOG_FILE="$RUNNER_TEMP/ios_simulator_build.log"
-          flutter build ios --simulator --debug --config-only
-          if ! xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
-            ARCHS=arm64 \
-            ONLY_ACTIVE_ARCH=YES \
-            EXCLUDED_ARCHS='x86_64 i386' \
-            build 2>&1 | tee "$LOG_FILE"; then
+          LOG_FILE="$RUNNER_TEMP/ios_build_no_signing.log"
+          if ! flutter build ios --release --no-codesign 2>&1 | tee "$LOG_FILE"; then
             echo "----- Extracted Xcode/Swift errors -----"
             grep -nE "(^error:| error: |SwiftCompile failed|Uncategorized \(Xcode\))" "$LOG_FILE" | tail -n 200 || true
             echo "----- End extracted errors -----"
             exit 1
           fi
 
-      - name: Upload simulator build log
+      - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-build-log
-          path: ${{ runner.temp }}/ios_simulator_build.log
+          name: ios-build-no-signing-log
+          path: ${{ runner.temp }}/ios_build_no_signing.log
 
-      - name: Upload simulator app artifact
+      - name: Upload iOS app artifact (unsigned)
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator-runner-app
-          path: build/ios/iphonesimulator/Runner.app
+          name: ios-runner-app-unsigned
+          path: build/ios/iphoneos/Runner.app
 
   ios-signed-ipa:
     name: iOS Signed IPA
