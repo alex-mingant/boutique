@@ -1,0 +1,120 @@
+name: iOS Build (Flutter)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_signed_ipa:
+        description: "Build signed IPA (requires iOS secrets)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  ios-simulator-build:
+    name: iOS Simulator Build (no signing)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build iOS simulator app
+        run: flutter build ios --simulator --debug
+
+      - name: Upload simulator app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-runner-app
+          path: build/ios/iphonesimulator/Runner.app
+
+  ios-signed-ipa:
+    name: iOS Signed IPA
+    if: github.event_name == 'workflow_dispatch' && inputs.build_signed_ipa == true
+    runs-on: macos-14
+
+    env:
+      BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+      P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      EXPORT_OPTIONS_PLIST_BASE64: ${{ secrets.EXPORT_OPTIONS_PLIST_BASE64 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Validate signing secrets
+        run: |
+          [ -n "$BUILD_CERTIFICATE_BASE64" ] || (echo "Missing BUILD_CERTIFICATE_BASE64"; exit 1)
+          [ -n "$P12_PASSWORD" ] || (echo "Missing P12_PASSWORD"; exit 1)
+          [ -n "$BUILD_PROVISION_PROFILE_BASE64" ] || (echo "Missing BUILD_PROVISION_PROFILE_BASE64"; exit 1)
+          [ -n "$KEYCHAIN_PASSWORD" ] || (echo "Missing KEYCHAIN_PASSWORD"; exit 1)
+          [ -n "$EXPORT_OPTIONS_PLIST_BASE64" ] || (echo "Missing EXPORT_OPTIONS_PLIST_BASE64"; exit 1)
+
+      - name: Prepare signing files
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          EXPORT_OPTIONS_PATH=$RUNNER_TEMP/ExportOptions.plist
+
+          export CERTIFICATE_PATH PP_PATH EXPORT_OPTIONS_PATH
+
+          python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          Path(os.environ["CERTIFICATE_PATH"]).write_bytes(
+              base64.b64decode(os.environ["BUILD_CERTIFICATE_BASE64"])
+          )
+          Path(os.environ["PP_PATH"]).write_bytes(
+              base64.b64decode(os.environ["BUILD_PROVISION_PROFILE_BASE64"])
+          )
+          Path(os.environ["EXPORT_OPTIONS_PATH"]).write_bytes(
+              base64.b64decode(os.environ["EXPORT_OPTIONS_PLIST_BASE64"])
+          )
+          PY
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+          echo "EXPORT_OPTIONS_PATH=$EXPORT_OPTIONS_PATH" >> $GITHUB_ENV
+
+      - name: Build signed IPA
+        run: flutter build ipa --release --export-options-plist=$EXPORT_OPTIONS_PATH
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-signed-ipa
+          path: build/ios/ipa/*.ipa
