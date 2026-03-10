@@ -55,7 +55,14 @@ jobs:
         run: |
           set -o pipefail
           LOG_FILE="$RUNNER_TEMP/ios_simulator_build.log"
-          if ! flutter build ios --simulator --debug 2>&1 | tee "$LOG_FILE"; then
+          flutter build ios --simulator --debug --config-only
+          if ! xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            build 2>&1 | tee "$LOG_FILE"; then
             echo "----- Extracted Xcode/Swift errors -----"
             grep -nE "(^error:| error: |SwiftCompile failed|Uncategorized \(Xcode\))" "$LOG_FILE" | tail -n 200 || true
             echo "----- End extracted errors -----"
