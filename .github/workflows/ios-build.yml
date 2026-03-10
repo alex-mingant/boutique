@@ -31,8 +31,28 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Install CocoaPods dependencies (retry)
+        run: |
+          cd ios
+          rm -f Podfile.lock
+          rm -rf Pods
+          pod deintegrate || true
+          pod repo update
+
+          for attempt in 1 2 3; do
+            echo "pod install attempt ${attempt}"
+            if pod install --repo-update; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "pod install failed after 3 attempts"
+              exit 1
+            fi
+            sleep 15
+          done
+
       - name: Build iOS simulator app
-        run: flutter build ios --simulator --debug
+        run: flutter build ios --simulator --debug -v
 
       - name: Upload simulator app artifact
         uses: actions/upload-artifact@v4
@@ -64,6 +84,26 @@ jobs:
 
       - name: Flutter pub get
         run: flutter pub get
+
+      - name: Install CocoaPods dependencies (retry)
+        run: |
+          cd ios
+          rm -f Podfile.lock
+          rm -rf Pods
+          pod deintegrate || true
+          pod repo update
+
+          for attempt in 1 2 3; do
+            echo "pod install attempt ${attempt}"
+            if pod install --repo-update; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "pod install failed after 3 attempts"
+              exit 1
+            fi
+            sleep 15
+          done
 
       - name: Validate signing secrets
         run: |
@@ -111,7 +151,7 @@ jobs:
           echo "EXPORT_OPTIONS_PATH=$EXPORT_OPTIONS_PATH" >> $GITHUB_ENV
 
       - name: Build signed IPA
-        run: flutter build ipa --release --export-options-plist=$EXPORT_OPTIONS_PATH
+        run: flutter build ipa --release --export-options-plist=$EXPORT_OPTIONS_PATH -v
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
