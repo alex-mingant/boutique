@@ -52,7 +52,22 @@ jobs:
           done
 
       - name: Build iOS simulator app
-        run: flutter build ios --simulator --debug
+        run: |
+          set -o pipefail
+          LOG_FILE="$RUNNER_TEMP/ios_simulator_build.log"
+          if ! flutter build ios --simulator --debug 2>&1 | tee "$LOG_FILE"; then
+            echo "----- Extracted Xcode/Swift errors -----"
+            grep -nE "(^error:| error: |SwiftCompile failed|Uncategorized \(Xcode\))" "$LOG_FILE" | tail -n 200 || true
+            echo "----- End extracted errors -----"
+            exit 1
+          fi
+
+      - name: Upload simulator build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-build-log
+          path: ${{ runner.temp }}/ios_simulator_build.log
 
       - name: Upload simulator app artifact
         uses: actions/upload-artifact@v4
@@ -151,7 +166,22 @@ jobs:
           echo "EXPORT_OPTIONS_PATH=$EXPORT_OPTIONS_PATH" >> $GITHUB_ENV
 
       - name: Build signed IPA
-        run: flutter build ipa --release --export-options-plist=$EXPORT_OPTIONS_PATH
+        run: |
+          set -o pipefail
+          LOG_FILE="$RUNNER_TEMP/ios_signed_build.log"
+          if ! flutter build ipa --release --export-options-plist=$EXPORT_OPTIONS_PATH 2>&1 | tee "$LOG_FILE"; then
+            echo "----- Extracted Xcode/Swift errors -----"
+            grep -nE "(^error:| error: |SwiftCompile failed|Uncategorized \(Xcode\))" "$LOG_FILE" | tail -n 200 || true
+            echo "----- End extracted errors -----"
+            exit 1
+          fi
+
+      - name: Upload signed build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-signed-build-log
+          path: ${{ runner.temp }}/ios_signed_build.log
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
